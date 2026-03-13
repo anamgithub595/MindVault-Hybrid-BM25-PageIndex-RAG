@@ -11,26 +11,30 @@ Full hybrid pipeline:
   5. Log to audit trail
 """
 from __future__ import annotations
-import json
+
 import logging
 import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db, get_hybrid_retriever, get_llm_client,
-    get_prompt_builder, get_citation_formatter,
+    get_citation_formatter,
+    get_db,
+    get_hybrid_retriever,
+    get_llm_client,
+    get_prompt_builder,
 )
-from app.core.exceptions import EmptyQueryError, NoResultsError, LLMProviderError
-from app.db.models import Document, Page
+from app.core.exceptions import EmptyQueryError, LLMProviderError
+from app.db.models import Document
 from app.db.repositories.document_repo import DocumentRepository, PageRepository
 from app.db.repositories.query_log_repo import QueryLogRepository
 from app.generation.citation_formatter import CitationFormatter
 from app.generation.llm_client import LLMClient
 from app.generation.prompt_builder import PageContext, PromptBuilder
-from app.retrieval.hybrid_retriever import HybridRetriever, HybridHit
-from app.schemas.query import QueryRequest, QueryResponse, CitedSourceResponse
+from app.retrieval.hybrid_retriever import HybridHit, HybridRetriever
+from app.schemas.query import CitedSourceResponse, QueryRequest, QueryResponse
 
 router = APIRouter(prefix="/query", tags=["Query"])
 logger = logging.getLogger(__name__)

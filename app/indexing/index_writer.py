@@ -5,9 +5,11 @@ Orchestrates: RawDocument → tokenise each page → write BM25 index to SQLite.
 This is the only indexing module that touches the database.
 """
 from __future__ import annotations
+
 import logging
-from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.connectors.base import RawDocument
 from app.db.models import Page
 from app.db.repositories.document_repo import DocumentRepository, PageRepository
