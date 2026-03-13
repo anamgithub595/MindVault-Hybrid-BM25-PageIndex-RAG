@@ -4,19 +4,16 @@ app/api/routes/ingest.py
 POST /ingest/upload  — file upload (PDF, MD, TXT)
 POST /ingest/notion  — Notion page by URL or ID
 """
-
 from __future__ import annotations
-
 import logging
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db, get_pageindex_client, get_tokeniser
-from app.core.exceptions import FileTooLargeError, ParseError, UnsupportedFileTypeError
+from app.core.dependencies import get_db, get_tokeniser, get_pageindex_client
+from app.core.exceptions import UnsupportedFileTypeError, FileTooLargeError, ParseError
 from app.db.repositories.document_repo import DocumentRepository
-from app.indexing.tokeniser import Tokeniser
 from app.ingestion.pipeline import IngestionPipeline
+from app.indexing.tokeniser import Tokeniser
 from app.pageindex.client import PageIndexAPIClient
 from app.schemas.document import IngestResponse, NotionIngestRequest
 
@@ -46,14 +43,14 @@ async def upload_file(
             content=content,
         )
     except UnsupportedFileTypeError as e:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(e)) from e
     except FileTooLargeError as e:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(e)) from e
     except ParseError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
     except Exception as e:
         logger.exception(f"Unexpected ingestion error: {e}")
-        raise HTTPException(status_code=500, detail="Ingestion failed unexpectedly.")
+        raise HTTPException(status_code=500, detail="Ingestion failed unexpectedly.") from e
 
     doc_repo = DocumentRepository(db)
     doc = await doc_repo.get_by_id(doc_id)
@@ -86,10 +83,10 @@ async def ingest_notion(
     try:
         doc_id = await pipeline.ingest_notion_page(req.page_id_or_url)
     except ParseError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except Exception as e:
         logger.exception(f"Notion ingestion error: {e}")
-        raise HTTPException(status_code=500, detail="Notion ingestion failed.")
+        raise HTTPException(status_code=500, detail="Notion ingestion failed.") from e
 
     doc_repo = DocumentRepository(db)
     doc = await doc_repo.get_by_id(doc_id)
