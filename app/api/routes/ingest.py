@@ -99,3 +99,4 @@ async def ingest_notion(
         pi_status=doc.pi_status,
         message="Notion page BM25 indexed. PageIndex skipped (non-PDF).",
     )
+
