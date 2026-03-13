@@ -5,6 +5,7 @@ Provider-agnostic LLM client.
 Supports Anthropic Claude, OpenAI GPT, and Google Gemini behind one interface.
 Only this module knows which SDK to call.
 """
+
 from __future__ import annotations
 
 import logging
@@ -101,7 +102,9 @@ class LLMClient:
             from google import genai
             from google.genai import types
         except ImportError as e:
-            raise LLMProviderError("google-genai not installed. Run: pip install google-genai") from e
+            raise LLMProviderError(
+                "google-genai not installed. Run: pip install google-genai"
+            ) from e
         try:
             client = genai.Client(api_key=self.api_key)
             response = await client.aio.models.generate_content(

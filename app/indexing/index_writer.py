@@ -4,6 +4,7 @@ app/indexing/index_writer.py
 Orchestrates: RawDocument → tokenise each page → write BM25 index to SQLite.
 This is the only indexing module that touches the database.
 """
+
 from __future__ import annotations
 
 import logging
@@ -47,14 +48,16 @@ class IndexWriter:
             for rp in raw_doc.pages:
                 tc = self._tok.count_tokens(rp.content)
                 total_tokens += tc
-                page_orms.append(Page(
-                    document_id=doc_id,
-                    page_number=rp.page_number,
-                    section_heading=rp.section_heading,
-                    content=rp.content,
-                    token_count=tc,
-                    char_count=len(rp.content),
-                ))
+                page_orms.append(
+                    Page(
+                        document_id=doc_id,
+                        page_number=rp.page_number,
+                        section_heading=rp.section_heading,
+                        content=rp.content,
+                        token_count=tc,
+                        char_count=len(rp.content),
+                    )
+                )
 
             await self._page_repo.bulk_create(page_orms)
 
@@ -62,12 +65,14 @@ class IndexWriter:
             for page_orm, rp in zip(page_orms, raw_doc.pages, strict=False):
                 tf_dict, count_dict = self._tok.term_frequencies(rp.content)
                 for term, tf in tf_dict.items():
-                    index_entries.append({
-                        "term": term,
-                        "page_id": page_orm.id,
-                        "tf": tf,
-                        "term_count": count_dict.get(term, 1),
-                    })
+                    index_entries.append(
+                        {
+                            "term": term,
+                            "page_id": page_orm.id,
+                            "tf": tf,
+                            "term_count": count_dict.get(term, 1),
+                        }
+                    )
 
             await self._idx_repo.bulk_upsert(index_entries)
             await self._doc_repo.mark_bm25_indexed(doc_id, len(page_orms), total_tokens)

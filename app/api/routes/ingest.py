@@ -4,6 +4,7 @@ app/api/routes/ingest.py
 POST /ingest/upload  — file upload (PDF, MD, TXT)
 POST /ingest/notion  — Notion page by URL or ID
 """
+
 from __future__ import annotations
 
 import logging
@@ -45,9 +46,13 @@ async def upload_file(
             content=content,
         )
     except UnsupportedFileTypeError as e:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(e)
+        ) from e
     except FileTooLargeError as e:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(e)
+        ) from e
     except ParseError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
     except Exception as e:
@@ -101,4 +106,3 @@ async def ingest_notion(
         pi_status=doc.pi_status,
         message="Notion page BM25 indexed. PageIndex skipped (non-PDF).",
     )
-

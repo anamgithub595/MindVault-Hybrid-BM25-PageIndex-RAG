@@ -20,7 +20,7 @@ class UnsupportedFileTypeError(MindVaultError):
 class FileTooLargeError(MindVaultError):
     def __init__(self, size: int, max_bytes: int):
         super().__init__(
-            f"File {size/1_048_576:.1f} MB exceeds limit of {max_bytes/1_048_576:.0f} MB"
+            f"File {size / 1_048_576:.1f} MB exceeds limit of {max_bytes / 1_048_576:.0f} MB"
         )
 
 
