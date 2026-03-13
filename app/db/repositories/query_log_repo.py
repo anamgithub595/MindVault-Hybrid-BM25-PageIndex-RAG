@@ -3,9 +3,13 @@ app/db/repositories/query_log_repo.py
 ───────────────────────────────────────
 Write-only audit trail for every query.
 """
+
 from __future__ import annotations
+
 import json
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models import QueryLog
 
 

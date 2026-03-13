@@ -7,7 +7,9 @@ Formula:
   score(q,d) = Σ IDF(qi) · [tf·(k1+1)] / [tf + k1·(1−b + b·|d|/avgdl)]
   IDF(qi)    = log( (N − df + 0.5) / (df + 0.5) + 1 )
 """
+
 from __future__ import annotations
+
 import math
 from dataclasses import dataclass, field
 

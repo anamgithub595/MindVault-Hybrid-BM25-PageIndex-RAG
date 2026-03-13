@@ -10,27 +10,32 @@ Full hybrid pipeline:
   4. Build prompt → LLM → format citations
   5. Log to audit trail
 """
+
 from __future__ import annotations
-import json
+
 import logging
 import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import (
-    get_db, get_hybrid_retriever, get_llm_client,
-    get_prompt_builder, get_citation_formatter,
+    get_citation_formatter,
+    get_db,
+    get_hybrid_retriever,
+    get_llm_client,
+    get_prompt_builder,
 )
-from app.core.exceptions import EmptyQueryError, NoResultsError, LLMProviderError
-from app.db.models import Document, Page
+from app.core.exceptions import EmptyQueryError, LLMProviderError
+from app.db.models import Document
 from app.db.repositories.document_repo import DocumentRepository, PageRepository
 from app.db.repositories.query_log_repo import QueryLogRepository
 from app.generation.citation_formatter import CitationFormatter
 from app.generation.llm_client import LLMClient
 from app.generation.prompt_builder import PageContext, PromptBuilder
-from app.retrieval.hybrid_retriever import HybridRetriever, HybridHit
-from app.schemas.query import QueryRequest, QueryResponse, CitedSourceResponse
+from app.retrieval.hybrid_retriever import HybridHit, HybridRetriever
+from app.schemas.query import CitedSourceResponse, QueryRequest, QueryResponse
 
 router = APIRouter(prefix="/query", tags=["Query"])
 logger = logging.getLogger(__name__)
@@ -54,15 +59,14 @@ async def query(
     if doc_ids:
         # Get pi_doc_ids for scoped documents (for PageIndex retrieval)
         r = await db.execute(
-            select(Document.pi_doc_id)
-            .where(Document.id.in_(doc_ids), Document.pi_status == "completed")
+            select(Document.pi_doc_id).where(
+                Document.id.in_(doc_ids), Document.pi_status == "completed"
+            )
         )
         pi_doc_ids = [row[0] for row in r.all() if row[0]]
     else:
         # All completed PageIndex documents
-        r = await db.execute(
-            select(Document.pi_doc_id).where(Document.pi_status == "completed")
-        )
+        r = await db.execute(select(Document.pi_doc_id).where(Document.pi_status == "completed"))
         pi_doc_ids = [row[0] for row in r.all() if row[0]]
 
     # ── 2. Override alpha if provided ─────────────────────────────────
@@ -111,18 +115,20 @@ async def query(
         if not page:
             continue
         doc = docs_by_id.get(page.document_id)
-        page_contexts.append(PageContext(
-            page_id=page.id,
-            page_number=page.page_number,
-            document_title=doc.title or doc.filename if doc else "Unknown",
-            filename=doc.filename if doc else "unknown",
-            section_heading=page.section_heading,
-            content=page.content,
-            rrf_score=hit.rrf_score,
-            bm25_score=hit.bm25_score,
-            pi_node_title=hit.pi_node_title,
-            pi_relevant_content=hit.pi_relevant_content,
-        ))
+        page_contexts.append(
+            PageContext(
+                page_id=page.id,
+                page_number=page.page_number,
+                document_title=doc.title or doc.filename if doc else "Unknown",
+                filename=doc.filename if doc else "unknown",
+                section_heading=page.section_heading,
+                content=page.content,
+                rrf_score=hit.rrf_score,
+                bm25_score=hit.bm25_score,
+                pi_node_title=hit.pi_node_title,
+                pi_relevant_content=hit.pi_relevant_content,
+            )
+        )
         bm25_hits_by_page[hit.page_id] = hit.matched_bm25_terms
         if hit.pi_node_id:
             pi_node_ids.append(hit.pi_node_id)

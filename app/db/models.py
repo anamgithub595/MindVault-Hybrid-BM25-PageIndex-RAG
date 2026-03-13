@@ -10,18 +10,28 @@ Tables:
   pi_docs      — maps our document_id → PageIndex doc_id (cloud)
   query_log    — full audit trail of every query + response
 """
+
 from __future__ import annotations
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
+
 from sqlalchemy import (
-    BigInteger, DateTime, Float, ForeignKey,
-    Index, Integer, String, Text, UniqueConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.database import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Documents ─────────────────────────────────────────────────────────────
@@ -30,20 +40,22 @@ class Document(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
-    source_type: Mapped[str] = mapped_column(String(64), nullable=False)   # pdf|md|notion|docx
+    source_type: Mapped[str] = mapped_column(String(64), nullable=False)  # pdf|md|notion|docx
     title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     total_pages: Mapped[int] = mapped_column(Integer, default=0)
     total_tokens: Mapped[int] = mapped_column(Integer, default=0)
     # bm25_status: local index build status
     bm25_status: Mapped[str] = mapped_column(String(32), default="pending")  # pending|indexed|error
     # pi_status: PageIndex cloud processing status
-    pi_status: Mapped[str] = mapped_column(String(32), default="pending")    # pending|processing|completed|failed|skipped
+    pi_status: Mapped[str] = mapped_column(
+        String(32), default="pending"
+    )  # pending|processing|completed|failed|skipped
     pi_doc_id: Mapped[str | None] = mapped_column(String(128), nullable=True)  # pi-abc123...
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    pages: Mapped[list["Page"]] = relationship(
+    pages: Mapped[list[Page]] = relationship(
         "Page", back_populates="document", cascade="all, delete-orphan"
     )
 
@@ -62,8 +74,8 @@ class Page(Base):
     token_count: Mapped[int] = mapped_column(Integer, default=0)
     char_count: Mapped[int] = mapped_column(Integer, default=0)
 
-    document: Mapped["Document"] = relationship("Document", back_populates="pages")
-    index_entries: Mapped[list["PageIndexEntry"]] = relationship(
+    document: Mapped[Document] = relationship("Document", back_populates="pages")
+    index_entries: Mapped[list[PageIndexEntry]] = relationship(
         "PageIndexEntry", back_populates="page", cascade="all, delete-orphan"
     )
 
@@ -76,6 +88,7 @@ class PageIndexEntry(Base):
     One row per (term, page) pair.
     IDF is computed at query time from doc_freq counts.
     """
+
     __tablename__ = "page_index"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -86,7 +99,7 @@ class PageIndexEntry(Base):
     tf: Mapped[float] = mapped_column(Float, nullable=False)
     term_count: Mapped[int] = mapped_column(Integer, default=1)
 
-    page: Mapped["Page"] = relationship("Page", back_populates="index_entries")
+    page: Mapped[Page] = relationship("Page", back_populates="index_entries")
 
     __table_args__ = (
         UniqueConstraint("term", "page_id", name="uq_term_page"),
@@ -104,8 +117,8 @@ class QueryLog(Base):
     # Which document_ids were scoped (JSON list or empty = all)
     scoped_doc_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Sources used
-    bm25_page_ids: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON
-    pi_node_ids: Mapped[str | None] = mapped_column(Text, nullable=True)     # JSON
+    bm25_page_ids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    pi_node_ids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     final_page_ids: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)

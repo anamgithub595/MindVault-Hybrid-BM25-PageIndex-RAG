@@ -2,12 +2,12 @@
 tests/unit/test_tokeniser.py  +  tests/unit/test_bm25.py (combined)
 Run with: pytest tests/unit/ -v
 """
-import pytest
-from app.indexing.tokeniser import Tokeniser
-from app.indexing.bm25 import BM25Scorer, ScoredPage
 
+from app.indexing.bm25 import BM25Scorer, ScoredPage
+from app.indexing.tokeniser import Tokeniser
 
 # ── Tokeniser Tests ───────────────────────────────────────────────────────
+
 
 class TestTokeniser:
     def setup_method(self):
@@ -27,7 +27,7 @@ class TestTokeniser:
 
     def test_short_token_filter(self):
         tokens = self.tok.tokenise("I am a developer")
-        assert "am" not in tokens   # length < 2 ... wait, "am" is 2 chars
+        assert "am" not in tokens  # length < 2 ... wait, "am" is 2 chars
         # min_token_length=2, "a" is 1 char → removed
         assert "a" not in tokens
 
@@ -47,6 +47,7 @@ class TestTokeniser:
 
 
 # ── BM25 Tests ────────────────────────────────────────────────────────────
+
 
 class TestBM25Scorer:
     def setup_method(self):
@@ -88,7 +89,7 @@ class TestBM25Scorer:
     def test_page_matching_two_terms_scores_higher(self):
         postings = {
             "cat": [(1, 0.5, 5), (2, 0.2, 2)],
-            "dog": [(1, 0.3, 3)],          # page 1 matches both
+            "dog": [(1, 0.3, 3)],  # page 1 matches both
         }
         doc_freqs = {"cat": 2, "dog": 1}
         page_lengths = {1: 30, 2: 20}

@@ -10,7 +10,9 @@ Each page context shows:
   - PageIndex node title + relevant snippet (if available)
   - Full raw page text (BM25 source)
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -21,10 +23,10 @@ class PageContext:
     document_title: str
     filename: str
     section_heading: str | None
-    content: str            # full BM25 page text
+    content: str  # full BM25 page text
     rrf_score: float
     bm25_score: float
-    pi_node_title: str      # "" if no PI match
+    pi_node_title: str  # "" if no PI match
     pi_relevant_content: str  # PI snippet — often more focused than full page
 
 
@@ -63,7 +65,7 @@ class PromptBuilder:
     @staticmethod
     def _format_page(rank: int, p: PageContext) -> str:
         lines = [
-            f"[{rank}] \"{p.document_title}\" | File: {p.filename} | Page {p.page_number}"
+            f'[{rank}] "{p.document_title}" | File: {p.filename} | Page {p.page_number}'
             f"  (RRF={p.rrf_score:.4f}  BM25={p.bm25_score:.3f})",
         ]
         if p.section_heading:

@@ -4,12 +4,16 @@ app/db/repositories/document_repo.py
 Data access for `documents` and `pages` tables.
 Zero business logic — pure DB I/O.
 """
+
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import Sequence
+
+from collections.abc import Sequence
+from datetime import UTC, datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.db.models import Document, Page
 
 
@@ -35,11 +39,13 @@ class DocumentRepository:
 
     async def mark_bm25_indexed(self, doc_id: int, total_pages: int, total_tokens: int) -> None:
         await self._s.execute(
-            update(Document).where(Document.id == doc_id).values(
+            update(Document)
+            .where(Document.id == doc_id)
+            .values(
                 bm25_status="indexed",
                 total_pages=total_pages,
                 total_tokens=total_tokens,
-                indexed_at=datetime.now(timezone.utc),
+                indexed_at=datetime.now(UTC),
             )
         )
 
@@ -51,9 +57,9 @@ class DocumentRepository:
 
     async def mark_error(self, doc_id: int, message: str) -> None:
         await self._s.execute(
-            update(Document).where(Document.id == doc_id).values(
-                bm25_status="error", pi_status="failed", error_message=message
-            )
+            update(Document)
+            .where(Document.id == doc_id)
+            .values(bm25_status="error", pi_status="failed", error_message=message)
         )
 
     async def delete(self, doc_id: int) -> None:

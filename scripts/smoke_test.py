@@ -7,7 +7,7 @@ Tests BM25 indexing + query path (PageIndex is mocked).
 Usage:
     python scripts/smoke_test.py
 """
-import asyncio
+
 import sys
 from pathlib import Path
 
@@ -15,23 +15,38 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Minimal env before imports
 import os
+
 os.environ.setdefault("PAGEINDEX_API_KEY", "pi-test-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./data/smoke_test.db")
 
+from unittest.mock import AsyncMock, patch
+
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch, MagicMock
 
 
 def run_smoke():
     # Patch external calls
     with (
-        patch("app.pageindex.client.PageIndexAPIClient.submit_document", new_callable=AsyncMock, return_value="pi-test123"),
-        patch("app.pageindex.client.PageIndexAPIClient.poll_until_ready", new_callable=AsyncMock, return_value={"status": "completed"}),
-        patch("app.pageindex.client.PageIndexAPIClient.retrieve", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "app.pageindex.client.PageIndexAPIClient.submit_document",
+            new_callable=AsyncMock,
+            return_value="pi-test123",
+        ),
+        patch(
+            "app.pageindex.client.PageIndexAPIClient.poll_until_ready",
+            new_callable=AsyncMock,
+            return_value={"status": "completed"},
+        ),
+        patch(
+            "app.pageindex.client.PageIndexAPIClient.retrieve",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
         patch("app.generation.llm_client.LLMClient.complete", new_callable=AsyncMock) as mock_llm,
     ):
         from app.generation.llm_client import LLMResponse
+
         mock_llm.return_value = LLMResponse(
             content="MindVault handles enterprise knowledge retrieval using both BM25 and PageIndex.",
             input_tokens=100,
@@ -40,6 +55,7 @@ def run_smoke():
         )
 
         from app.main import app
+
         with TestClient(app) as client:
             print("1. Health check…", end=" ")
             r = client.get("/health")
@@ -48,7 +64,9 @@ def run_smoke():
 
             print("2. Ingest markdown…", end=" ")
             md_content = b"# Enterprise RAG\n\nMindVault uses hybrid BM25 and PageIndex retrieval.\n\n## Architecture\n\nBM25 handles exact keyword matching. PageIndex handles semantic tree search."
-            r = client.post("/ingest/upload", files={"file": ("test.md", md_content, "text/markdown")})
+            r = client.post(
+                "/ingest/upload", files={"file": ("test.md", md_content, "text/markdown")}
+            )
             assert r.status_code == 201, f"Got {r.status_code}: {r.text}"
             doc_id = r.json()["document_id"]
             print(f"✅  (doc_id={doc_id})")
@@ -75,7 +93,9 @@ def run_smoke():
             print(f"   Sources: {[s['filename'] for s in result['sources']]}")
 
             print("6. Delete document…", end=" ")
-            with patch("app.pageindex.client.PageIndexAPIClient.delete_document", new_callable=AsyncMock):
+            with patch(
+                "app.pageindex.client.PageIndexAPIClient.delete_document", new_callable=AsyncMock
+            ):
                 r = client.delete(f"/documents/{doc_id}")
                 assert r.status_code == 204
             print("✅")

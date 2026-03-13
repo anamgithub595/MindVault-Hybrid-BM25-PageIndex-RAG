@@ -1,5 +1,7 @@
 """tests/unit/test_connectors.py — connector parsing tests"""
+
 import pytest
+
 from app.connectors.markdown_connector import MarkdownConnector
 
 
@@ -31,6 +33,7 @@ async def test_markdown_title_from_h1():
 @pytest.mark.asyncio
 async def test_markdown_invalid_encoding():
     from app.core.exceptions import ParseError
+
     c = MarkdownConnector()
     with pytest.raises(ParseError):
         await c.extract(b"\xff\xfe invalid bytes", "bad.md")

@@ -3,8 +3,11 @@ app/connectors/markdown_connector.py
 ──────────────────────────────────────
 Splits Markdown / plain-text files at H1/H2 heading boundaries.
 """
+
 from __future__ import annotations
+
 import re
+
 from app.connectors.base import BaseConnector, RawDocument, RawPage
 from app.core.exceptions import ParseError
 
@@ -36,13 +39,15 @@ class MarkdownConnector(BaseConnector):
         splits.append(len(text))
         pages: list[RawPage] = []
         for i, start in enumerate(splits[:-1]):
-            section = text[start:splits[i + 1]].strip()
+            section = text[start : splits[i + 1]].strip()
             if not section:
                 continue
             hm = _HEADING_RE.match(section)
-            pages.append(RawPage(
-                page_number=len(pages) + 1,
-                content=section,
-                section_heading=hm.group(2).strip() if hm else None,
-            ))
+            pages.append(
+                RawPage(
+                    page_number=len(pages) + 1,
+                    content=section,
+                    section_heading=hm.group(2).strip() if hm else None,
+                )
+            )
         return pages

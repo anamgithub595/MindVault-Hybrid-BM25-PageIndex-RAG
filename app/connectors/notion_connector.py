@@ -4,9 +4,13 @@ app/connectors/notion_connector.py
 Pulls pages from the Notion API.
 Splits at heading boundaries → one RawPage per section.
 """
+
 from __future__ import annotations
+
 import re
+
 import httpx
+
 from app.connectors.base import BaseConnector, RawDocument, RawPage
 from app.core.config import get_settings
 from app.core.exceptions import ParseError
@@ -91,7 +95,9 @@ class NotionConnector(BaseConnector):
             nonlocal lines, heading
             c = "\n".join(lines).strip()
             if c:
-                pages.append(RawPage(page_number=len(pages)+1, content=c, section_heading=heading))
+                pages.append(
+                    RawPage(page_number=len(pages) + 1, content=c, section_heading=heading)
+                )
             lines = []
 
         for b in blocks:

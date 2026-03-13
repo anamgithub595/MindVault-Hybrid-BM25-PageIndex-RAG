@@ -4,7 +4,9 @@ app/connectors/base.py
 Abstract base class + shared data types for all document connectors.
 Connectors know nothing about indexing, the database, or PageIndex.
 """
+
 from __future__ import annotations
+
 import abc
 import re
 from dataclasses import dataclass, field
@@ -12,7 +14,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class RawPage:
-    page_number: int           # 1-based
+    page_number: int  # 1-based
     content: str
     section_heading: str | None = None
 
@@ -20,7 +22,7 @@ class RawPage:
 @dataclass
 class RawDocument:
     filename: str
-    source_type: str           # pdf | markdown | notion | docx
+    source_type: str  # pdf | markdown | notion | docx
     title: str | None
     pages: list[RawPage] = field(default_factory=list)
 

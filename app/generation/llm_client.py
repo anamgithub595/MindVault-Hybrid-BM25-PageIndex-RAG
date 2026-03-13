@@ -5,22 +5,25 @@ Provider-agnostic LLM client.
 Supports Anthropic Claude, OpenAI GPT, and Google Gemini behind one interface.
 Only this module knows which SDK to call.
 """
+
 from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
+
 from app.core.exceptions import LLMProviderError
- 
+
 logger = logging.getLogger(__name__)
- 
- 
+
+
 @dataclass
 class LLMResponse:
     content: str
     input_tokens: int
     output_tokens: int
     model: str
- 
- 
+
+
 class LLMClient:
     def __init__(
         self,
@@ -35,7 +38,7 @@ class LLMClient:
         self.api_key = api_key
         self.max_tokens = max_tokens
         self.temperature = temperature
- 
+
     async def complete(self, system_prompt: str, user_message: str) -> LLMResponse:
         if self.provider == "anthropic":
             return await self._anthropic(system_prompt, user_message)
@@ -44,7 +47,7 @@ class LLMClient:
         if self.provider == "gemini":
             return await self._gemini(system_prompt, user_message)
         raise LLMProviderError(f"Unknown provider: {self.provider!r}")
- 
+
     async def _anthropic(self, system: str, user: str) -> LLMResponse:
         try:
             import anthropic
@@ -67,7 +70,7 @@ class LLMClient:
             )
         except Exception as exc:
             raise LLMProviderError(str(exc)) from exc
- 
+
     async def _openai(self, system: str, user: str) -> LLMResponse:
         try:
             from openai import AsyncOpenAI
@@ -93,13 +96,15 @@ class LLMClient:
             )
         except Exception as exc:
             raise LLMProviderError(str(exc)) from exc
- 
+
     async def _gemini(self, system: str, user: str) -> LLMResponse:
         try:
             from google import genai
             from google.genai import types
         except ImportError as e:
-            raise LLMProviderError("google-genai not installed. Run: pip install google-genai") from e
+            raise LLMProviderError(
+                "google-genai not installed. Run: pip install google-genai"
+            ) from e
         try:
             client = genai.Client(api_key=self.api_key)
             response = await client.aio.models.generate_content(
@@ -121,14 +126,6 @@ class LLMClient:
             )
         except Exception as exc:
             raise LLMProviderError(str(exc)) from exc
- 
-
-
-
-
-
-
-
 
 
 '''
@@ -261,9 +258,6 @@ class LLMClient:
 
 
 '''
-
-
-
 
 
 '''

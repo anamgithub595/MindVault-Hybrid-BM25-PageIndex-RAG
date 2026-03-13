@@ -5,8 +5,11 @@ Extracts text from PDF files using pdfplumber.
 One PDF page → one RawPage.
 Also exports the raw bytes so PageIndex can ingest the original PDF.
 """
+
 from __future__ import annotations
+
 import io
+
 from app.connectors.base import BaseConnector, RawDocument, RawPage
 from app.core.exceptions import ParseError
 

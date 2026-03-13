@@ -5,7 +5,9 @@ Async SQLAlchemy engine + session factory.
 SQLite stores the local document registry, BM25 inverted index,
 and query audit log. PageIndex stores its own data in the cloud.
 """
+
 from pathlib import Path
+
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -13,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+
 from app.core.config import get_settings
 
 
@@ -45,4 +48,5 @@ class Base(DeclarativeBase):
 async def create_all_tables() -> None:
     async with engine.begin() as conn:
         from app.db import models  # noqa: F401
+
         await conn.run_sync(Base.metadata.create_all)

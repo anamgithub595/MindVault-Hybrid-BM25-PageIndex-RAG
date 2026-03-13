@@ -19,15 +19,19 @@ alpha=0.0 → pure BM25
 alpha=1.0 → pure PageIndex
 alpha=0.5 → equal weight (default)
 """
+
 from __future__ import annotations
+
 import asyncio
 import logging
 from dataclasses import dataclass, field
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.retrieval.bm25_retriever import BM25Retriever
-from app.retrieval.pageindex_retriever import PageIndexRetriever
+
 from app.indexing.bm25 import BM25Hit
 from app.pageindex.client import PINode
+from app.retrieval.bm25_retriever import BM25Retriever
+from app.retrieval.pageindex_retriever import PageIndexRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +41,8 @@ _RRF_K = 60  # standard RRF constant
 @dataclass
 class HybridHit:
     """A single result from hybrid fusion, ready for LLM context."""
-    page_id: int                         # local SQLite page id
+
+    page_id: int  # local SQLite page id
     rrf_score: float
     bm25_score: float = 0.0
     pi_score: float = 0.0
@@ -45,8 +50,8 @@ class HybridHit:
     # PageIndex node info (may be empty if only BM25 matched)
     pi_node_title: str = ""
     pi_node_id: str = ""
-    pi_page_index: int = 0               # 1-based PDF page from PageIndex
-    pi_relevant_content: str = ""        # snippet from PageIndex node
+    pi_page_index: int = 0  # 1-based PDF page from PageIndex
+    pi_relevant_content: str = ""  # snippet from PageIndex node
 
 
 class HybridRetriever:
@@ -83,14 +88,11 @@ class HybridRetriever:
         """
         # ── Run both retrievers concurrently ──────────────────────────
         bm25_task = self._bm25.retrieve(query, session, doc_ids)
+
         async def _empty():
             return []
-        pi_task = (
-            self._pi.retrieve(query, pi_doc_ids)
-            if pi_doc_ids
-            else _empty()
-                
-        )
+
+        pi_task = self._pi.retrieve(query, pi_doc_ids) if pi_doc_ids else _empty()
 
         bm25_hits: list[BM25Hit]
         pi_nodes: list[PINode]
@@ -128,17 +130,19 @@ class HybridRetriever:
             bm25_hit = bm25_by_page.get(pid)
             pi_info = pi_page_map.get(pid)
 
-            hits.append(HybridHit(
-                page_id=pid,
-                rrf_score=rrf,
-                bm25_score=bm25_hit.score if bm25_hit else 0.0,
-                pi_score=pi_info.get("pi_score", 0.0) if pi_info else 0.0,
-                matched_bm25_terms=bm25_hit.matched_terms if bm25_hit else [],
-                pi_node_title=pi_info.get("title", "") if pi_info else "",
-                pi_node_id=pi_info.get("node_id", "") if pi_info else "",
-                pi_page_index=pi_info.get("page_index", 0) if pi_info else 0,
-                pi_relevant_content=pi_info.get("relevant_content", "") if pi_info else "",
-            ))
+            hits.append(
+                HybridHit(
+                    page_id=pid,
+                    rrf_score=rrf,
+                    bm25_score=bm25_hit.score if bm25_hit else 0.0,
+                    pi_score=pi_info.get("pi_score", 0.0) if pi_info else 0.0,
+                    matched_bm25_terms=bm25_hit.matched_terms if bm25_hit else [],
+                    pi_node_title=pi_info.get("title", "") if pi_info else "",
+                    pi_node_id=pi_info.get("node_id", "") if pi_info else "",
+                    pi_page_index=pi_info.get("page_index", 0) if pi_info else 0,
+                    pi_relevant_content=pi_info.get("relevant_content", "") if pi_info else "",
+                )
+            )
 
         hits.sort(key=lambda h: h.rrf_score, reverse=True)
         return hits[: self.final_top_k]
@@ -160,7 +164,8 @@ class HybridRetriever:
             return {}
 
         from sqlalchemy import select
-        from app.db.models import Page, Document
+
+        from app.db.models import Document, Page
 
         result_map: dict[int, dict] = {}
         for i, node in enumerate(nodes):

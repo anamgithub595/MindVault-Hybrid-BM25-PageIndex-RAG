@@ -4,15 +4,19 @@ app/retrieval/bm25_retriever.py
 Converts a query string → BM25 ranked list of local page hits.
 Touches the database but has zero knowledge of PageIndex.
 """
+
 from __future__ import annotations
+
 import logging
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import EmptyQueryError
 from app.db.models import Page
 from app.db.repositories.index_repo import IndexRepository
-from app.indexing.bm25 import BM25Scorer, BM25Hit
+from app.indexing.bm25 import BM25Hit, BM25Scorer
 from app.indexing.tokeniser import Tokeniser
-from app.core.exceptions import EmptyQueryError, NoResultsError
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +53,7 @@ class BM25Retriever:
         if not postings:
             return []
 
-        candidate_ids = {
-            pid for plist in postings.values() for pid, _, _ in plist
-        }
+        candidate_ids = {pid for plist in postings.values() for pid, _, _ in plist}
         page_lengths = await self._fetch_lengths(session, list(candidate_ids))
 
         hits = self._scorer.rank(

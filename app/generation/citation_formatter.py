@@ -4,8 +4,11 @@ app/generation/citation_formatter.py
 Wraps the raw LLM answer with structured source metadata.
 Zero LLM calls — pure post-processing.
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
+
 from app.generation.prompt_builder import PageContext
 
 
@@ -35,7 +38,7 @@ class CitationFormatter:
         self,
         raw_answer: str,
         pages: list[PageContext],
-        bm25_hits_by_page: dict[int, list[str]],   # page_id → matched terms
+        bm25_hits_by_page: dict[int, list[str]],  # page_id → matched terms
         pi_node_ids: list[str],
     ) -> AnswerResult:
         sources = [
@@ -50,9 +53,7 @@ class CitationFormatter:
             )
             for p in pages
         ]
-        all_terms = sorted({
-            t for terms in bm25_hits_by_page.values() for t in terms
-        })
+        all_terms = sorted({t for terms in bm25_hits_by_page.values() for t in terms})
         return AnswerResult(
             answer=raw_answer.strip(),
             sources=sources,

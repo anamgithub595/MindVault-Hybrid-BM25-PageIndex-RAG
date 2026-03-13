@@ -1,6 +1,9 @@
 """app/schemas/document.py — Pydantic models for /ingest and /documents"""
+
 from __future__ import annotations
+
 from datetime import datetime
+
 from pydantic import BaseModel
 
 

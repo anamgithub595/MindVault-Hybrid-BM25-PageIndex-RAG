@@ -1,7 +1,4 @@
 """tests/unit/test_hybrid_fusion.py — RRF fusion logic tests"""
-import pytest
-from app.indexing.bm25 import BM25Hit
-from app.pageindex.client import PINode, PIRelevantContent
 
 
 def rrf_score(bm25_rank, pi_rank, alpha=0.5, k=60):

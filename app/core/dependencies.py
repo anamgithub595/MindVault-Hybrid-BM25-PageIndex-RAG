@@ -4,22 +4,24 @@ app/core/dependencies.py
 FastAPI Depends() providers.
 Route handlers receive fully-constructed service objects — zero construction logic in routes.
 """
+
 from __future__ import annotations
-from typing import AsyncGenerator
+
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings, Settings
+from app.core.config import get_settings
 from app.db.database import AsyncSessionLocal
-from app.indexing.tokeniser import Tokeniser
-from app.indexing.bm25 import BM25Scorer
-from app.retrieval.bm25_retriever import BM25Retriever
-from app.retrieval.pageindex_retriever import PageIndexRetriever
-from app.retrieval.hybrid_retriever import HybridRetriever
+from app.generation.citation_formatter import CitationFormatter
 from app.generation.llm_client import LLMClient
 from app.generation.prompt_builder import PromptBuilder
-from app.generation.citation_formatter import CitationFormatter
+from app.indexing.bm25 import BM25Scorer
+from app.indexing.tokeniser import Tokeniser
 from app.pageindex.client import PageIndexAPIClient
+from app.retrieval.bm25_retriever import BM25Retriever
+from app.retrieval.hybrid_retriever import HybridRetriever
+from app.retrieval.pageindex_retriever import PageIndexRetriever
 
 
 # ── DB session ────────────────────────────────────────────────────────────

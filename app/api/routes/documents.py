@@ -10,18 +10,19 @@ Also:
 GET  /health
 GET  /
 """
+
 from __future__ import annotations
+
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_pageindex_client
-from app.db.models import Document
 from app.db.repositories.document_repo import DocumentRepository
 from app.db.repositories.index_repo import IndexRepository
 from app.pageindex.client import PageIndexAPIClient
-from app.schemas.document import DocumentSummary, DocumentDetail, IndexStatsResponse
+from app.schemas.document import DocumentDetail, DocumentSummary, IndexStatsResponse
 
 docs_router = APIRouter(prefix="/documents", tags=["Documents"])
 health_router = APIRouter(tags=["Health"])
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 # ── Documents ──────────────────────────────────────────────────────────────
+
 
 @docs_router.get("", response_model=list[DocumentSummary])
 async def list_documents(db: AsyncSession = Depends(get_db)):
@@ -88,6 +90,7 @@ async def delete_document(
 
 
 # ── Health ─────────────────────────────────────────────────────────────────
+
 
 @health_router.get("/health")
 async def health():

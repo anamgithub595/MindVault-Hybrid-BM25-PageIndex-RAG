@@ -5,19 +5,92 @@ Stateless text → token list converter.
 Used by both the index writer and the BM25 retriever.
 No database, no BM25 math — pure text processing.
 """
+
 from __future__ import annotations
+
 import re
 from collections import Counter
 
-_STOPWORDS = frozenset({
-    "a","an","the","and","or","but","in","on","at","to","for","of","with",
-    "by","from","is","are","was","were","be","been","being","have","has",
-    "had","do","does","did","will","would","shall","should","may","might",
-    "must","can","could","not","no","nor","so","yet","both","either",
-    "neither","each","than","too","very","just","as","if","then","when",
-    "where","while","that","this","these","those","it","its","they","them",
-    "their","we","our","you","your","he","she","his","her","i","my","me",
-})
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "shall",
+        "should",
+        "may",
+        "might",
+        "must",
+        "can",
+        "could",
+        "not",
+        "no",
+        "nor",
+        "so",
+        "yet",
+        "both",
+        "either",
+        "neither",
+        "each",
+        "than",
+        "too",
+        "very",
+        "just",
+        "as",
+        "if",
+        "then",
+        "when",
+        "where",
+        "while",
+        "that",
+        "this",
+        "these",
+        "those",
+        "it",
+        "its",
+        "they",
+        "them",
+        "their",
+        "we",
+        "our",
+        "you",
+        "your",
+        "he",
+        "she",
+        "his",
+        "her",
+        "i",
+        "my",
+        "me",
+    }
+)
 _TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9\-]*[a-z0-9]|[a-z0-9]")
 
 
@@ -36,6 +109,7 @@ class Tokeniser:
         if stemming:
             try:
                 from nltk.stem import PorterStemmer
+
                 self._stemmer = PorterStemmer()
             except ImportError:
                 pass

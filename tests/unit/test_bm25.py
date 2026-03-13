@@ -1,7 +1,7 @@
 """tests/unit/test_bm25.py — BM25 pure-math tests (no DB needed)"""
-import pytest
+
+from app.indexing.bm25 import BM25Scorer
 from app.indexing.tokeniser import Tokeniser
-from app.indexing.bm25 import BM25Scorer, BM25Hit
 
 
 class TestTokeniser:

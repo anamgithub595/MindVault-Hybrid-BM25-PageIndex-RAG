@@ -4,11 +4,13 @@ app/retrieval/pageindex_retriever.py
 Converts a query string → PageIndex node hits via the PageIndex API.
 Has zero knowledge of BM25 or the local SQLite database.
 """
+
 from __future__ import annotations
+
 import asyncio
 import logging
+
 from app.pageindex.client import PageIndexAPIClient, PINode
-from app.core.exceptions import PageIndexRetrievalError
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +33,7 @@ class PageIndexRetriever:
         if not pi_doc_ids:
             return []
 
-        tasks = [
-            self._client.retrieve(pid, query, thinking)
-            for pid in pi_doc_ids
-        ]
+        tasks = [self._client.retrieve(pid, query, thinking) for pid in pi_doc_ids]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         nodes: list[PINode] = []

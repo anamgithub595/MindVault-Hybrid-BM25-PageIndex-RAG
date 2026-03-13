@@ -4,16 +4,19 @@ app/api/routes/ingest.py
 POST /ingest/upload  — file upload (PDF, MD, TXT)
 POST /ingest/notion  — Notion page by URL or ID
 """
+
 from __future__ import annotations
+
 import logging
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db, get_tokeniser, get_pageindex_client
-from app.core.exceptions import UnsupportedFileTypeError, FileTooLargeError, ParseError
+from app.core.dependencies import get_db, get_pageindex_client, get_tokeniser
+from app.core.exceptions import FileTooLargeError, ParseError, UnsupportedFileTypeError
 from app.db.repositories.document_repo import DocumentRepository
-from app.ingestion.pipeline import IngestionPipeline
 from app.indexing.tokeniser import Tokeniser
+from app.ingestion.pipeline import IngestionPipeline
 from app.pageindex.client import PageIndexAPIClient
 from app.schemas.document import IngestResponse, NotionIngestRequest
 

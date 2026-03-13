@@ -4,10 +4,14 @@ app/db/repositories/index_repo.py
 Data access for the BM25 inverted index (`page_index` table).
 Handles bulk inserts and term-lookup queries.
 """
+
 from __future__ import annotations
+
 from collections import defaultdict
+
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models import Page, PageIndexEntry
 
 
@@ -38,9 +42,12 @@ class IndexRepository:
         """
         if not terms:
             return {}
-        q = select(PageIndexEntry.term, PageIndexEntry.page_id,
-                   PageIndexEntry.tf, PageIndexEntry.term_count
-                   ).where(PageIndexEntry.term.in_(terms))
+        q = select(
+            PageIndexEntry.term,
+            PageIndexEntry.page_id,
+            PageIndexEntry.tf,
+            PageIndexEntry.term_count,
+        ).where(PageIndexEntry.term.in_(terms))
         if doc_ids:
             subq = select(Page.id).where(Page.document_id.in_(doc_ids)).scalar_subquery()
             q = q.where(PageIndexEntry.page_id.in_(subq))
@@ -53,9 +60,8 @@ class IndexRepository:
     async def get_document_frequencies(
         self, terms: list[str], doc_ids: list[int] | None = None
     ) -> dict[str, int]:
-        q = (
-            select(PageIndexEntry.term, func.count(PageIndexEntry.page_id).label("df"))
-            .where(PageIndexEntry.term.in_(terms))
+        q = select(PageIndexEntry.term, func.count(PageIndexEntry.page_id).label("df")).where(
+            PageIndexEntry.term.in_(terms)
         )
         if doc_ids:
             subq = select(Page.id).where(Page.document_id.in_(doc_ids)).scalar_subquery()
@@ -77,10 +83,10 @@ class IndexRepository:
         return float((await self._s.execute(q)).scalar_one() or 0)
 
     async def get_stats(self) -> dict:
-        unique = (await self._s.execute(
-            select(func.count(func.distinct(PageIndexEntry.term)))
-        )).scalar_one()
-        total = (await self._s.execute(
-            select(func.count()).select_from(PageIndexEntry)
-        )).scalar_one()
+        unique = (
+            await self._s.execute(select(func.count(func.distinct(PageIndexEntry.term))))
+        ).scalar_one()
+        total = (
+            await self._s.execute(select(func.count()).select_from(PageIndexEntry))
+        ).scalar_one()
         return {"unique_terms": unique, "total_index_entries": total}

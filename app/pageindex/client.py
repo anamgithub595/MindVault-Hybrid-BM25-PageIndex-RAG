@@ -14,7 +14,9 @@ Responsibilities:
 
 This is the ONLY file in the project that talks to PageIndex APIs.
 """
+
 from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -23,9 +25,9 @@ from dataclasses import dataclass, field
 import httpx
 
 from app.core.exceptions import (
+    PageIndexRetrievalError,
     PageIndexSubmitError,
     PageIndexTimeoutError,
-    PageIndexRetrievalError,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ _BASE = "https://api.pageindex.ai"
 
 @dataclass
 class PIRelevantContent:
-    page_index: int      # 1-based PDF page number
+    page_index: int  # 1-based PDF page number
     relevant_content: str
 
 
@@ -82,9 +84,7 @@ class PageIndexAPIClient:
                 files={"file": (filename, pdf_bytes, "application/pdf")},
             )
         if resp.status_code not in (200, 201):
-            raise PageIndexSubmitError(
-                f"PageIndex submit failed ({resp.status_code}): {resp.text}"
-            )
+            raise PageIndexSubmitError(f"PageIndex submit failed ({resp.status_code}): {resp.text}")
         doc_id = resp.json().get("doc_id")
         if not doc_id:
             raise PageIndexSubmitError(f"No doc_id in response: {resp.text}")
@@ -245,10 +245,12 @@ class PageIndexAPIClient:
                 )
                 for rc in n.get("relevant_contents", [])
             ]
-            nodes.append(PINode(
-                title=n.get("title", ""),
-                node_id=n.get("node_id", ""),
-                page_index=n.get("page_index", 0),
-                relevant_contents=contents,
-            ))
+            nodes.append(
+                PINode(
+                    title=n.get("title", ""),
+                    node_id=n.get("node_id", ""),
+                    page_index=n.get("page_index", 0),
+                    relevant_contents=contents,
+                )
+            )
         return nodes

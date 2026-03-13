@@ -10,21 +10,21 @@ For each uploaded document it does TWO things in parallel:
 Both paths use the same document_id in our local DB.
 Route handlers call this — they never touch connectors or writers directly.
 """
+
 from __future__ import annotations
+
 import asyncio
 import logging
-import tempfile
-import os
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.base import BaseConnector
-from app.connectors.pdf_connector import PDFConnector
 from app.connectors.markdown_connector import MarkdownConnector
 from app.connectors.notion_connector import NotionConnector
+from app.connectors.pdf_connector import PDFConnector
 from app.core.config import get_settings
-from app.core.exceptions import UnsupportedFileTypeError, FileTooLargeError, ParseError
+from app.core.exceptions import FileTooLargeError, UnsupportedFileTypeError
 from app.db.repositories.document_repo import DocumentRepository
 from app.indexing.index_writer import IndexWriter
 from app.indexing.tokeniser import Tokeniser
@@ -105,6 +105,7 @@ class IngestionPipeline:
         so it uses a new session from the engine.
         """
         from app.db.database import AsyncSessionLocal
+
         async with AsyncSessionLocal() as bg_session:
             doc_repo = DocumentRepository(bg_session)
             try:
