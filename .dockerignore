@@ -1,0 +1,33 @@
+# ── Never copy these into the Docker image ───────────────────
+.git/
+.gitignore
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+data/
+logs/
+*.log
+*.db
+uploads/
+tmp/
+.DS_Store
+docker/postgres-data/
+docker/redis-data/
+
+# ── Keep example env (not real .env) ─────────────────────────
+!config/.env.example
+config/.env
+
+# ── Tests not needed at runtime ──────────────────────────────
+tests/
+docs/
+*.md
+Makefile

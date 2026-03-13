@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mindvault
+  labels:
+    app.kubernetes.io/name: mindvault
+    app.kubernetes.io/managed-by: kubectl

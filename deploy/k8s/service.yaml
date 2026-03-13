@@ -1,0 +1,103 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — K8s Service
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Service
+metadata:
+  name: mindvault-svc
+  namespace: mindvault
+  labels:
+    app.kubernetes.io/name: mindvault
+spec:
+  selector:
+    app: mindvault
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — Ingress (nginx-ingress controller)
+#  Replace YOUR_DOMAIN with your actual domain.
+#  Requires cert-manager for TLS.
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mindvault-ingress
+  namespace: mindvault
+  labels:
+    app.kubernetes.io/name: mindvault
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "60m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - YOUR_DOMAIN
+      secretName: mindvault-tls
+  rules:
+    - host: YOUR_DOMAIN
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mindvault-svc
+                port:
+                  number: 80
+
+---
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — PersistentVolumeClaim (SQLite data)
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mindvault-data-pvc
+  namespace: mindvault
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard    # change to your cloud provider's class
+
+---
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — HorizontalPodAutoscaler
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mindvault-hpa
+  namespace: mindvault
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mindvault
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

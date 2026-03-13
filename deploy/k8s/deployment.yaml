@@ -1,0 +1,115 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — Kubernetes Deployment
+#  Includes: liveness/readiness probes, resource limits, rolling updates
+# ═══════════════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mindvault
+  namespace: mindvault
+  labels:
+    app.kubernetes.io/name: mindvault
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mindvault
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0        # zero-downtime deploys
+  template:
+    metadata:
+      labels:
+        app: mindvault
+        app.kubernetes.io/name: mindvault
+    spec:
+      # ── Security context ──────────────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+
+      # ── Init container: DB migration ──────────────────────────────
+      initContainers:
+        - name: db-init
+          image: mindvault:latest
+          imagePullPolicy: Always
+          command: ["python", "scripts/init_db.py"]
+          envFrom:
+            - configMapRef:
+                name: mindvault-config
+            - secretRef:
+                name: mindvault-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+
+      containers:
+        - name: mindvault
+          image: mindvault:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+
+          # ── Env from ConfigMap + Secret ───────────────────────────
+          envFrom:
+            - configMapRef:
+                name: mindvault-config
+            - secretRef:
+                name: mindvault-secrets
+
+          # ── Resource limits ───────────────────────────────────────
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+
+          # ── Probes ────────────────────────────────────────────────
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+          # ── Volumes ───────────────────────────────────────────────
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: logs
+              mountPath: /app/logs
+
+          # ── Security ──────────────────────────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mindvault-data-pvc
+        - name: logs
+          emptyDir: {}
+
+      restartPolicy: Always

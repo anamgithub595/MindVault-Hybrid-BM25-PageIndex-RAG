@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MindVault — Pipeline Architecture</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --accent-blue: #58a6ff;
+    --accent-green: #3fb950;
+    --accent-orange: #d29922;
+    --accent-purple: #bc8cff;
+    --accent-red: #f85149;
+    --accent-teal: #39d353;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --bm25: #1f6feb;
+    --pi: #a371f7;
+    --fusion: #3fb950;
+    --gen: #d29922;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 32px;
+  }
+
+  /* ── Tab navigation ── */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .tab {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .tab:hover { border-color: var(--accent-blue); color: var(--text); }
+  .tab.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    width: 100%;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 6px 0 4px 0;
+    text-align: center;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    margin: 4px 0;
+  }
+
+  .node {
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    padding: 10px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    min-width: 130px;
+  }
+  .node:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
+  .node.selected { box-shadow: 0 0 0 2px white; }
+
+  .node .label { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+  .node .sublabel { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+  .node .icon { font-size: 1.2rem; margin-bottom: 4px; }
+
+  /* Color variants */
+  .node.blue  { border-color: var(--bm25);   background: #1f2f4a; }
+  .node.purple{ border-color: var(--pi);     background: #251f3a; }
+  .node.green { border-color: var(--fusion); background: #1a2f1f; }
+  .node.orange{ border-color: var(--gen);    background: #2e2210; }
+  .node.red   { border-color: var(--accent-red); background: #2d1217; }
+  .node.teal  { border-color: #3ddbd9; background: #0d2527; }
+  .node.gray  { border-color: #484f57; background: #1c2128; }
+
+  /* Arrows */
+  .arrow { color: var(--text-muted); font-size: 1.2rem; flex-shrink: 0; }
+  .arrow-down { color: var(--text-muted); font-size: 1.1rem; margin: 2px 0; text-align: center; width: 100%; }
+
+  /* Parallel lanes */
+  .parallel {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+  }
+  .lane {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    max-width: 200px;
+  }
+  .lane-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 10px;
+  }
+  .lane-label.blue  { background: #1f2f4a; color: var(--accent-blue); }
+  .lane-label.purple{ background: #251f3a; color: var(--accent-purple); }
+
+  .parallel-sep {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+    margin: 20px 0;
+  }
+
+  /* ── Detail panel ── */
+  #detail {
+    max-width: 900px;
+    margin: 24px auto 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 20px 24px;
+    display: none;
+  }
+  #detail.visible { display: block; }
+  #detail h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  #detail .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  #detail .detail-item label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+  #detail .detail-item p { font-size: 0.82rem; color: var(--text); margin-top: 4px; line-height: 1.5; }
+  #detail code { background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-size: 0.78rem; color: var(--accent-blue); font-family: 'Cascadia Code', 'Fira Code', monospace; }
+
+  /* ── Architecture panel ── */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .arch-card {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px;
+  }
+  .arch-card h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .arch-card ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .arch-card ul li { font-size: 0.78rem; color: var(--text-muted); padding-left: 14px; position: relative; }
+  .arch-card ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent-blue); }
+  .arch-card ul li code { background: var(--surface2); border-radius: 3px; padding: 1px 5px; font-size: 0.74rem; color: var(--accent-blue); font-family: monospace; }
+
+  /* ── Data flow panel ── */
+  .flow-table {
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .flow-table table { width: 100%; border-collapse: collapse; }
+  .flow-table th {
+    background: var(--surface2);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 10px 14px;
+    text-align: left;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .flow-table td {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .flow-table tr:last-child td { border-bottom: none; }
+  .flow-table tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+  .badge.blue   { background: #1f2f4a; color: var(--accent-blue); }
+  .badge.purple { background: #251f3a; color: var(--accent-purple); }
+  .badge.green  { background: #1a2f1f; color: var(--accent-green); }
+  .badge.orange { background: #2e2210; color: var(--accent-orange); }
+
+  /* ── Env panel ── */
+  .env-section { max-width: 900px; margin: 0 auto; }
+  .env-section h3 { font-size: 0.82rem; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin: 18px 0 8px; }
+  .env-table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 8px; }
+  .env-table th { background: var(--surface2); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; padding: 8px 12px; text-align: left; color: var(--text-muted); }
+  .env-table td { padding: 8px 12px; font-size: 0.78rem; border-top: 1px solid var(--border); vertical-align: top; }
+  .env-table td:first-child { font-family: 'Cascadia Code', monospace; color: var(--accent-blue); font-size: 0.74rem; }
+  .env-table td:nth-child(2) { color: var(--accent-orange); font-family: monospace; font-size: 0.74rem; }
+  .env-table td:nth-child(3) { color: var(--text-muted); font-size: 0.76rem; }
+  .required { color: var(--accent-red) !important; font-weight: 700; font-size: 0.68rem; }
+</style>
+</head>
+<body>
+
+<h1>🧠 MindVault Pipeline Architecture</h1>
+<p class="subtitle">Hybrid BM25 + PageIndex RAG · Enterprise Knowledge Base · Click any node for details</p>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('flow')">Pipeline Flow</button>
+  <button class="tab" onclick="switchTab('arch')">Module Map</button>
+  <button class="tab" onclick="switchTab('data')">Data Flow</button>
+  <button class="tab" onclick="switchTab('env')">Config Reference</button>
+</div>
+
+<!-- ═══════════════ PIPELINE FLOW ═══════════════ -->
+<div id="tab-flow" class="panel active">
+<div class="flow">
+
+  <div class="section-label">📥 Ingestion Pipeline</div>
+
+  <div class="row">
+    <div class="node gray" onclick="showDetail('upload')">
+      <div class="icon">📤</div>
+      <div class="label">File Upload</div>
+      <div class="sublabel">PDF / MD / TXT</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node gray" onclick="showDetail('notion')">
+      <div class="icon">📓</div>
+      <div class="label">Notion API</div>
+      <div class="sublabel">Page by URL/ID</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="row">
+    <div class="node gray" onclick="showDetail('connector')">
+      <div class="icon">🔌</div>
+      <div class="label">Connector</div>
+      <div class="sublabel">PDFConnector · MarkdownConnector · NotionConnector</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓ RawDocument (pages[])</div>
+
+  <div class="parallel">
+    <div class="lane">
+      <div class="lane-label blue">BM25 Path</div>
+      <div class="node blue" onclick="showDetail('tokeniser')">
+        <div class="icon">🔤</div>
+        <div class="label">Tokeniser</div>
+        <div class="sublabel">stopwords · TF</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue" onclick="showDetail('indexwriter')">
+        <div class="icon">📇</div>
+        <div class="label">IndexWriter</div>
+        <div class="sublabel">page_index table</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue" onclick="showDetail('sqlite')">
+        <div class="icon">🗄️</div>
+        <div class="label">SQLite</div>
+        <div class="sublabel">docs · pages · index</div>
+      </div>
+    </div>
+
+    <div class="parallel-sep"></div>
+
+    <div class="lane">
+      <div class="lane-label purple">PageIndex Path</div>
+      <div class="node purple" onclick="showDetail('pisubmit')">
+        <div class="icon">☁️</div>
+        <div class="label">PI Submit</div>
+        <div class="sublabel">POST /doc/</div>
+      </div>
+      <div class="arrow-down">↓ (background)</div>
+      <div class="node purple" onclick="showDetail('pipoll')">
+        <div class="icon">⏳</div>
+        <div class="label">Poll Ready</div>
+        <div class="sublabel">GET /doc/{id}/</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node purple" onclick="showDetail('pitree')">
+        <div class="icon">🌲</div>
+        <div class="label">Tree Index</div>
+        <div class="sublabel">pi_doc_id stored</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down" style="margin-top:12px">↓ ↓</div>
+
+  <div class="section-label" style="margin-top:8px">🔍 Query Pipeline</div>
+
+  <div class="row">
+    <div class="node gray" onclick="showDetail('queryapi')">
+      <div class="icon">❓</div>
+      <div class="label">POST /query</div>
+      <div class="sublabel">QueryRequest</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="parallel">
+    <div class="lane">
+      <div class="lane-label blue">BM25 Retrieval</div>
+      <div class="node blue" onclick="showDetail('bm25ret')">
+        <div class="icon">🔑</div>
+        <div class="label">BM25Retriever</div>
+        <div class="sublabel">tokenise query</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue" onclick="showDetail('idxrepo')">
+        <div class="icon">📊</div>
+        <div class="label">IndexRepo</div>
+        <div class="sublabel">postings · IDF · lengths</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node blue" onclick="showDetail('bm25math')">
+        <div class="icon">🧮</div>
+        <div class="label">BM25Scorer</div>
+        <div class="sublabel">k1=1.5  b=0.75</div>
+      </div>
+      <div class="arrow-down">↓ BM25Hits[]</div>
+    </div>
+
+    <div class="parallel-sep"></div>
+
+    <div class="lane">
+      <div class="lane-label purple">PageIndex Retrieval</div>
+      <div class="node purple" onclick="showDetail('piret')">
+        <div class="icon">🌐</div>
+        <div class="label">PIRetriever</div>
+        <div class="sublabel">concurrent per doc</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node purple" onclick="showDetail('pisub2')">
+        <div class="icon">📡</div>
+        <div class="label">POST /retrieval/</div>
+        <div class="sublabel">retrieval_id</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node purple" onclick="showDetail('piresult')">
+        <div class="icon">🗂️</div>
+        <div class="label">GET /retrieval/{id}/</div>
+        <div class="sublabel">PINodes[]</div>
+      </div>
+      <div class="arrow-down">↓ PINodes[]</div>
+    </div>
+  </div>
+
+  <div class="arrow-down" style="margin-top: 8px">↓ both results</div>
+
+  <div class="row">
+    <div class="node green" onclick="showDetail('hybrid')">
+      <div class="icon">⚖️</div>
+      <div class="label">HybridRetriever</div>
+      <div class="sublabel">RRF Fusion · alpha=0.5</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓ HybridHits[] ranked</div>
+
+  <div class="row">
+    <div class="node green" onclick="showDetail('pagefetch')">
+      <div class="icon">📄</div>
+      <div class="label">Page Fetch</div>
+      <div class="sublabel">full text + doc title</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓ PageContext[]</div>
+
+  <div class="row">
+    <div class="node orange" onclick="showDetail('prompt')">
+      <div class="icon">✍️</div>
+      <div class="label">PromptBuilder</div>
+      <div class="sublabel">system + user message</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node orange" onclick="showDetail('llm')">
+      <div class="icon">🤖</div>
+      <div class="label">LLMClient</div>
+      <div class="sublabel">Claude / GPT</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node orange" onclick="showDetail('citations')">
+      <div class="icon">📝</div>
+      <div class="label">CitationFormatter</div>
+      <div class="sublabel">AnswerResult</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="row">
+    <div class="node teal" onclick="showDetail('response')">
+      <div class="icon">✅</div>
+      <div class="label">QueryResponse</div>
+      <div class="sublabel">answer · sources · latency_ms</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node gray" onclick="showDetail('auditlog')">
+      <div class="icon">📋</div>
+      <div class="label">Audit Log</div>
+      <div class="sublabel">query_log table</div>
+    </div>
+  </div>
+
+</div><!-- flow -->
+
+<!-- Detail popup -->
+<div id="detail">
+  <h3 id="detail-title"></h3>
+  <div class="detail-grid" id="detail-body"></div>
+</div>
+</div><!-- panel -->
+
+<!-- ═══════════════ MODULE MAP ═══════════════ -->
+<div id="tab-arch" class="panel">
+<div class="arch-grid">
+
+  <div class="arch-card">
+    <h3><span>🔌</span> Connectors <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#58a6ff">app/connectors/</code></h3>
+    <ul>
+      <li><code>base.py</code> — BaseConnector, RawPage, RawDocument</li>
+      <li><code>pdf_connector.py</code> — pdfplumber, 1 page = 1 RawPage</li>
+      <li><code>markdown_connector.py</code> — H1/H2 heading split</li>
+      <li><code>notion_connector.py</code> — Notion API, pagination</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>📇</span> Indexing <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#58a6ff">app/indexing/</code></h3>
+    <ul>
+      <li><code>tokeniser.py</code> — text→tokens, stopwords, TF</li>
+      <li><code>bm25.py</code> — pure BM25 math, no I/O</li>
+      <li><code>index_writer.py</code> — RawDoc→SQLite, only DB writer</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>☁️</span> PageIndex <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#a371f7">app/pageindex/</code></h3>
+    <ul>
+      <li><code>client.py</code> — submit, poll, retrieve, chat, delete</li>
+      <li>Only file that calls pageindex.ai API</li>
+      <li>PINode, PIRelevantContent dataclasses</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>🔍</span> Retrieval <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#3fb950">app/retrieval/</code></h3>
+    <ul>
+      <li><code>bm25_retriever.py</code> — query→BM25Hits via SQLite</li>
+      <li><code>pageindex_retriever.py</code> — query→PINodes via API</li>
+      <li><code>hybrid_retriever.py</code> — RRF fusion, alpha-weighted</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>🗄️</span> Database <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#58a6ff">app/db/</code></h3>
+    <ul>
+      <li><code>models.py</code> — documents, pages, page_index, query_log</li>
+      <li><code>document_repo.py</code> — CRUD for docs + pages</li>
+      <li><code>index_repo.py</code> — BM25 postings read/write</li>
+      <li><code>query_log_repo.py</code> — audit trail writer</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>🤖</span> Generation <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#d29922">app/generation/</code></h3>
+    <ul>
+      <li><code>llm_client.py</code> — Anthropic + OpenAI behind one API</li>
+      <li><code>prompt_builder.py</code> — assembles ranked context</li>
+      <li><code>citation_formatter.py</code> — wraps answer + sources</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>🌐</span> API Routes <code style="font-size:0.7rem;background:#1c2128;padding:2px 6px;border-radius:4px;color:#58a6ff">app/api/routes/</code></h3>
+    <ul>
+      <li><code>ingest.py</code> — POST /ingest/upload, /ingest/notion</li>
+      <li><code>query.py</code> — POST /query (full pipeline)</li>
+      <li><code>documents.py</code> — GET/DELETE /documents, /health</li>
+    </ul>
+  </div>
+
+  <div class="arch-card">
+    <h3><span>🐳</span> Deployment</h3>
+    <ul>
+      <li><code>Dockerfile</code> — multi-stage production image</li>
+      <li><code>docker-compose.yml</code> — prod stack + nginx</li>
+      <li><code>docker-compose.dev.yml</code> — hot-reload dev</li>
+      <li><code>deploy/k8s/</code> — K8s manifests + HPA</li>
+      <li><code>.github/workflows/</code> — CI/CD pipelines</li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════ DATA FLOW ═══════════════ -->
+<div id="tab-data" class="panel">
+<div class="flow-table">
+<table>
+<thead>
+<tr>
+  <th>#</th>
+  <th>Step</th>
+  <th>Input</th>
+  <th>Output</th>
+  <th>Layer</th>
+  <th>Storage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>File received</td>
+  <td>multipart/form-data bytes</td>
+  <td>raw bytes + filename</td>
+  <td><span class="badge blue">API</span></td>
+  <td>memory</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Connector</td>
+  <td>raw bytes</td>
+  <td>RawDocument (title, pages[])</td>
+  <td><span class="badge blue">Connector</span></td>
+  <td>memory</td>
+</tr>
+<tr>
+  <td>3a</td>
+  <td>BM25 index</td>
+  <td>RawDocument</td>
+  <td>Page rows + PageIndexEntry rows</td>
+  <td><span class="badge blue">IndexWriter</span></td>
+  <td>SQLite</td>
+</tr>
+<tr>
+  <td>3b</td>
+  <td>PageIndex submit</td>
+  <td>PDF bytes</td>
+  <td>pi_doc_id string</td>
+  <td><span class="badge purple">PageIndex API</span></td>
+  <td>cloud</td>
+</tr>
+<tr>
+  <td>4b</td>
+  <td>PageIndex poll</td>
+  <td>pi_doc_id</td>
+  <td>status=completed + tree</td>
+  <td><span class="badge purple">PageIndex API</span></td>
+  <td>cloud → SQLite</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Query received</td>
+  <td>QueryRequest JSON</td>
+  <td>query string + options</td>
+  <td><span class="badge blue">API</span></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>6a</td>
+  <td>BM25 retrieve</td>
+  <td>query string</td>
+  <td>BM25Hit[] (page_id, score, terms)</td>
+  <td><span class="badge blue">BM25Retriever</span></td>
+  <td>SQLite read</td>
+</tr>
+<tr>
+  <td>6b</td>
+  <td>PageIndex retrieve</td>
+  <td>query + pi_doc_ids[]</td>
+  <td>PINode[] (title, page_index, content)</td>
+  <td><span class="badge purple">PIRetriever</span></td>
+  <td>cloud API</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>RRF Fusion</td>
+  <td>BM25Hits + PINodes</td>
+  <td>HybridHit[] ranked by RRF score</td>
+  <td><span class="badge green">HybridRetriever</span></td>
+  <td>memory</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>Page hydration</td>
+  <td>HybridHit page_ids[]</td>
+  <td>PageContext[] with full text</td>
+  <td><span class="badge blue">PageRepository</span></td>
+  <td>SQLite read</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>Prompt build</td>
+  <td>PageContext[] + query</td>
+  <td>(system_prompt, user_message)</td>
+  <td><span class="badge orange">PromptBuilder</span></td>
+  <td>memory</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>LLM call</td>
+  <td>system + user prompts</td>
+  <td>LLMResponse (content, tokens)</td>
+  <td><span class="badge orange">LLMClient</span></td>
+  <td>LLM API</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td>Citation format</td>
+  <td>LLMResponse + PageContexts</td>
+  <td>AnswerResult (answer, sources[])</td>
+  <td><span class="badge orange">CitationFormatter</span></td>
+  <td>memory</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td>Audit log</td>
+  <td>query + result + latency</td>
+  <td>QueryLog row</td>
+  <td><span class="badge blue">QueryLogRepo</span></td>
+  <td>SQLite write</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td>Response</td>
+  <td>AnswerResult</td>
+  <td>QueryResponse JSON</td>
+  <td><span class="badge blue">API</span></td>
+  <td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════════ CONFIG REFERENCE ═══════════════ -->
+<div id="tab-env" class="panel">
+<div class="env-section">
+
+  <h3>🔑 Required — Must set before running</h3>
+  <table class="env-table">
+    <thead><tr><th>Variable</th><th>Example</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>PAGEINDEX_API_KEY</td><td>pi-abc123</td><td><span class="required">REQUIRED</span> — From dash.pageindex.ai/api-keys</td></tr>
+      <tr><td>ANTHROPIC_API_KEY</td><td>sk-ant-...</td><td><span class="required">REQUIRED if anthropic</span> — From console.anthropic.com</td></tr>
+      <tr><td>OPENAI_API_KEY</td><td>sk-...</td><td><span class="required">REQUIRED if openai</span> — From platform.openai.com</td></tr>
+      <tr><td>SECRET_KEY</td><td>hex-64-chars</td><td><span class="required">REQUIRED in prod</span> — Run: openssl rand -hex 32</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🤖 LLM Settings</h3>
+  <table class="env-table">
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>LLM_PROVIDER</td><td>anthropic</td><td>anthropic or openai</td></tr>
+      <tr><td>LLM_MODEL</td><td>claude-sonnet-4-6</td><td>Model name for the provider</td></tr>
+      <tr><td>LLM_MAX_TOKENS</td><td>2048</td><td>Max tokens in LLM response</td></tr>
+      <tr><td>LLM_TEMPERATURE</td><td>0.2</td><td>0.0=deterministic, 1.0=creative</td></tr>
+    </tbody>
+  </table>
+
+  <h3>⚙️ BM25 Tuning</h3>
+  <table class="env-table">
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>BM25_K1</td><td>1.5</td><td>Term frequency saturation. Higher = more weight to repeated terms</td></tr>
+      <tr><td>BM25_B</td><td>0.75</td><td>Length normalisation. 0=none, 1=full normalisation</td></tr>
+      <tr><td>BM25_TOP_K</td><td>10</td><td>BM25 candidates before RRF fusion</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🌲 PageIndex Tuning</h3>
+  <table class="env-table">
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>PI_TOP_K</td><td>5</td><td>PageIndex nodes returned before fusion</td></tr>
+      <tr><td>PI_POLL_INTERVAL_SEC</td><td>2</td><td>Seconds between status polls</td></tr>
+      <tr><td>PI_POLL_TIMEOUT_SEC</td><td>120</td><td>Max wait for PageIndex processing</td></tr>
+    </tbody>
+  </table>
+
+  <h3>⚖️ Hybrid Fusion</h3>
+  <table class="env-table">
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>HYBRID_ALPHA</td><td>0.5</td><td>0.0 = pure BM25 · 1.0 = pure PageIndex · 0.5 = equal</td></tr>
+      <tr><td>FINAL_TOP_K</td><td>5</td><td>Pages sent to LLM after fusion</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🗄️ Storage</h3>
+  <table class="env-table">
+    <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>DATABASE_URL</td><td>sqlite+aiosqlite:///./data/mindvault.db</td><td>SQLAlchemy async URL. Swap to postgresql+asyncpg://... for production</td></tr>
+      <tr><td>MAX_UPLOAD_SIZE_MB</td><td>50</td><td>Maximum file size per upload</td></tr>
+    </tbody>
+  </table>
+
+</div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names = ['flow','arch','data','env'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('detail').classList.remove('visible');
+}
+
+const DETAILS = {
+  upload: { title:'📤 File Upload', file:'app/api/routes/ingest.py', what:'Receives multipart/form-data. Validates file extension and size. Passes bytes to IngestionPipeline.', key:'POST /ingest/upload — supports PDF, MD, TXT. Returns document_id + status.' },
+  notion: { title:'📓 Notion Connector', file:'app/connectors/notion_connector.py', what:'Fetches page via Notion REST API. Paginates through all blocks. Splits at heading_1/heading_2 boundaries.', key:'Requires NOTION_TOKEN env var. POST /ingest/notion with {page_id_or_url}.' },
+  connector: { title:'🔌 Connector Layer', file:'app/connectors/', what:'Each connector is a BaseConnector subclass that returns a RawDocument with a list of RawPage objects. No DB knowledge.', key:'RawPage has: page_number, content, section_heading. RawDocument has: filename, source_type, title, pages[].' },
+  tokeniser: { title:'🔤 Tokeniser', file:'app/indexing/tokeniser.py', what:'Lowercases text, removes stopwords, extracts tokens with regex. Computes TF (term frequency) per page. Stateless — no I/O.', key:'term_frequencies() → ({term: tf}, {term: count}). Used by both IndexWriter and BM25Retriever.' },
+  indexwriter: { title:'📇 IndexWriter', file:'app/indexing/index_writer.py', what:'The only module that writes to the BM25 index. Orchestrates: tokenise → bulk insert Pages → bulk upsert PageIndexEntries → mark_bm25_indexed.', key:'One transaction per document. On error: marks document bm25_status=error and re-raises.' },
+  sqlite: { title:'🗄️ SQLite Database', file:'app/db/models.py', what:'4 tables: documents (one per file), pages (one per chunk/section), page_index (inverted BM25 index: term→page_id+tf), query_log (audit trail).', key:'async SQLAlchemy 2.0 + aiosqlite. Swap to PostgreSQL by changing DATABASE_URL.' },
+  pisubmit: { title:'☁️ PageIndex Submit', file:'app/pageindex/client.py', what:'Calls POST https://api.pageindex.ai/doc/ with the PDF bytes. Returns pi_doc_id (e.g. pi-abc123). PDF-only — markdown/notion are skipped.', key:'submit_document(pdf_bytes, filename) → str. Stored in documents.pi_doc_id.' },
+  pipoll: { title:'⏳ Poll Until Ready', file:'app/pageindex/client.py', what:'Background asyncio.Task polls GET /doc/{id}/?type=tree every PI_POLL_INTERVAL_SEC until status=completed or timeout. Updates pi_status in DB using a fresh session.', key:'poll_until_ready() raises PageIndexTimeoutError after PI_POLL_TIMEOUT_SEC seconds.' },
+  pitree: { title:'🌲 PageIndex Tree', file:'app/pageindex/client.py', what:'Once completed, the tree is a hierarchical TOC of the document. Nodes have: title, node_id, page_index, text, children[]. This is what makes semantic retrieval possible without vectors.', key:'documents.pi_status = "completed". pi_doc_id used for all subsequent retrieval calls.' },
+  queryapi: { title:'❓ POST /query', file:'app/api/routes/query.py', what:'Full pipeline coordinator. Resolves doc scoping, overrides alpha if provided, runs hybrid retrieval, fetches pages, builds prompt, calls LLM, formats citations, logs audit.', key:'QueryRequest: {query, doc_ids?, alpha?, top_k, pi_thinking}. Returns QueryResponse.' },
+  bm25ret: { title:'🔑 BM25Retriever', file:'app/retrieval/bm25_retriever.py', what:'Tokenises query → fetches postings from page_index table → fetches document frequencies → fetches page lengths → calls BM25Scorer.rank().', key:'Returns list[BM25Hit] sorted by descending score. Each hit has page_id, score, matched_terms.' },
+  idxrepo: { title:'📊 IndexRepository', file:'app/db/repositories/index_repo.py', what:'Reads from page_index table. get_postings() returns {term: [(page_id, tf, term_count)]}. Also provides doc frequencies, total page count, average page length.', key:'All reads can be scoped to specific doc_ids for document-level ACL filtering.' },
+  bm25math: { title:'🧮 BM25Scorer', file:'app/indexing/bm25.py', what:'Pure BM25 Okapi scoring. IDF = log((N-df+0.5)/(df+0.5)+1). Score = Σ IDF·tf·(k1+1)/(tf+k1·(1-b+b·dl/avgdl)).', key:'k1=1.5 (TF saturation), b=0.75 (length norm). Fully stateless — no DB, no I/O.' },
+  piret: { title:'🌐 PageIndexRetriever', file:'app/retrieval/pageindex_retriever.py', what:'Runs asyncio.gather() to retrieve from multiple pi_doc_ids concurrently. Merges results, de-duplicates by node_id, sorts by relevance.', key:'Returns list[PINode] with relevant_contents (page_index + text snippets).' },
+  pisub2: { title:'📡 Submit Retrieval', file:'app/pageindex/client.py', what:'POST /retrieval/ with {doc_id, query, thinking}. Returns retrieval_id. PageIndex uses hybrid LLM+value tree search internally.', key:'thinking=True triggers deeper reasoning (slower but more thorough). Default: False.' },
+  piresult: { title:'🗂️ Get Retrieval Results', file:'app/pageindex/client.py', what:'Polls GET /retrieval/{id}/ until status=completed. Returns retrieved_nodes[] each with relevant_contents[] mapping page_index → relevant text snippet.', key:'page_index is 1-based PDF page number. Used to join back to local SQLite Page rows.' },
+  hybrid: { title:'⚖️ HybridRetriever — RRF Fusion', file:'app/retrieval/hybrid_retriever.py', what:'Reciprocal Rank Fusion: score(d) = (1-α)·1/(60+bm25_rank) + α·1/(60+pi_rank). Pages in both lists get boosted. Pages in only one list still score.', key:'alpha=0 → pure BM25. alpha=1 → pure PageIndex. Default 0.5. Overridable per-query.' },
+  pagefetch: { title:'📄 Page Hydration', file:'app/api/routes/query.py', what:'Fetches full Page.content + Document metadata for each HybridHit.page_id. Builds PageContext list in RRF-rank order.', key:'PageContext: page_id, page_number, document_title, filename, section_heading, content, rrf_score, bm25_score, pi_node_title, pi_relevant_content.' },
+  prompt: { title:'✍️ PromptBuilder', file:'app/generation/prompt_builder.py', what:'Assembles system prompt (citation rules, enterprise persona) and user message with ranked page contexts. Caps each page at 800 chars. Shows RRF scores and PI excerpts.', key:'System prompt enforces: cite every claim, use PI excerpt when available, never fabricate.' },
+  llm: { title:'🤖 LLMClient', file:'app/generation/llm_client.py', what:'Provider-agnostic. Supports Anthropic (claude-sonnet-4-6 etc) and OpenAI (gpt-4o etc). Returns LLMResponse with content + token counts.', key:'Switch provider via LLM_PROVIDER env var. No code changes needed.' },
+  citations: { title:'📝 CitationFormatter', file:'app/generation/citation_formatter.py', what:'Wraps raw LLM answer into AnswerResult with structured CitedSource list. Each source has: document_title, filename, page_number, section_heading, pi_node_title, scores.', key:'Zero LLM calls — pure post-processing. Separates answer text from provenance metadata.' },
+  response: { title:'✅ QueryResponse', file:'app/schemas/query.py', what:'Final JSON response: answer (string), sources[] (cited pages), bm25_terms_matched, retrieved_page_ids, pi_node_ids, latency_ms.', key:'All scores included so clients can show retrieval transparency.' },
+  auditlog: { title:'📋 Audit Log', file:'app/db/repositories/query_log_repo.py', what:'Writes one QueryLog row per query. Stores: query text, scoped doc IDs, bm25 page IDs, PI node IDs, final page IDs, answer, latency_ms.', key:'Non-fatal — failures are logged but do not affect the response. Used for analytics.' },
+};
+
+function showDetail(key) {
+  const d = DETAILS[key];
+  if (!d) return;
+  document.getElementById('detail-title').textContent = d.title;
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-item"><label>File</label><p><code>${d.file}</code></p></div>
+    <div class="detail-item"><label>What it does</label><p>${d.what}</p></div>
+    <div class="detail-item" style="grid-column:1/-1"><label>Key detail</label><p>${d.key}</p></div>
+  `;
+  const el = document.getElementById('detail');
+  el.classList.add('visible');
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+</script>
+</body>
+</html>

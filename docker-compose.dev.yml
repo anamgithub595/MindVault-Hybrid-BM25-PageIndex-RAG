@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — Development Docker Compose
+#
+#  Usage:
+#    docker compose -f docker-compose.dev.yml up
+#    docker compose -f docker-compose.dev.yml run app pytest tests/unit/
+# ═══════════════════════════════════════════════════════════════════════
+version: "3.9"
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: mindvault_dev
+    env_file:
+      - config/.env
+    environment:
+      - APP_ENV=development
+      - LOG_LEVEL=debug
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/mindvault_dev.db
+    volumes:
+      # Hot-reload: mount source so changes are reflected immediately
+      - .:/app
+      - /app/.venv           # exclude host venv from mount
+      - mindvault_dev_data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - mindvault_dev_net
+    command: >
+      sh -c "python scripts/init_db.py &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug"
+
+volumes:
+  mindvault_dev_data:
+
+networks:
+  mindvault_dev_net:
+    driver: bridge

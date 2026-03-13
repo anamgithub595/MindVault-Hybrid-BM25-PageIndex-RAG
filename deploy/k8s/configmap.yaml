@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mindvault-config
+  namespace: mindvault
+  labels:
+    app.kubernetes.io/name: mindvault
+data:
+  APP_NAME: "MindVault"
+  APP_ENV: "production"
+  APP_HOST: "0.0.0.0"
+  APP_PORT: "8000"
+  LOG_LEVEL: "info"
+  LLM_PROVIDER: "anthropic"
+  LLM_MODEL: "claude-sonnet-4-6"
+  LLM_MAX_TOKENS: "2048"
+  LLM_TEMPERATURE: "0.2"
+  DATABASE_URL: "sqlite+aiosqlite:////app/data/mindvault.db"
+  BM25_K1: "1.5"
+  BM25_B: "0.75"
+  BM25_TOP_K: "10"
+  PI_TOP_K: "5"
+  PI_POLL_INTERVAL_SEC: "2"
+  PI_POLL_TIMEOUT_SEC: "120"
+  HYBRID_ALPHA: "0.5"
+  FINAL_TOP_K: "5"
+  MAX_UPLOAD_SIZE_MB: "50"

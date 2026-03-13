@@ -1,0 +1,34 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — Test Runner Compose
+#  Used by CI (GitHub Actions) and local test runs.
+#
+#  Usage:
+#    docker compose -f docker-compose.test.yml up --abort-on-container-exit
+# ═══════════════════════════════════════════════════════════════════════
+version: "3.9"
+
+services:
+
+  test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: mindvault_test
+    environment:
+      - APP_ENV=test
+      - PAGEINDEX_API_KEY=pi-test-key
+      - ANTHROPIC_API_KEY=sk-test-key
+      - DATABASE_URL=sqlite+aiosqlite:////tmp/mindvault_test.db
+      - LOG_LEVEL=warning
+    volumes:
+      - .:/app
+      - /app/.venv
+    command: >
+      sh -c "python scripts/init_db.py &&
+             pytest tests/unit/ -v --tb=short --junit-xml=test-results/junit.xml"
+    networks:
+      - mindvault_test_net
+
+networks:
+  mindvault_test_net:
+    driver: bridge

@@ -1,0 +1,112 @@
+# ═══════════════════════════════════════════════════════════
+#  MindVault — .gitignore
+#  NEVER commit secrets, compiled files, or runtime data
+# ═══════════════════════════════════════════════════════════
+
+# ── Secrets & environment ────────────────────────────────────
+config/.env
+config/*.env
+.env
+.env.*
+!config/.env.example
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.manifest
+*.spec
+MANIFEST
+
+# ── Virtual environments ─────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.env/
+.venv.bak/
+
+# ── Testing & coverage ───────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+test-results/
+junit*.xml
+pytest-report.xml
+
+# ── Type checking ────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# ── Runtime data ─────────────────────────────────────────────
+data/
+*.db
+*.db-shm
+*.db-wal
+uploads/
+tmp/
+temp/
+
+# ── Logs ─────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ── Docker ───────────────────────────────────────────────────
+docker/postgres-data/
+docker/redis-data/
+
+# ── IDEs ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.project
+.classpath
+.settings/
+
+# ── Jupyter ──────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Docs build ───────────────────────────────────────────────
+docs/_build/
+site/
+
+# ── Misc ─────────────────────────────────────────────────────
+*.bak
+*.orig
+*.rej
+.cache/
+.ruff_cache/

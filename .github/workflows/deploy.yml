@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  MindVault — GitHub Actions CD (Deploy) Pipeline
+#
+#  Triggers: push to main after CI passes
+#  Strategy: Rolling deploy to K8s via kubectl
+#
+#  Required GitHub Secrets:
+#    KUBECONFIG_BASE64     — base64-encoded kubeconfig
+#    PAGEINDEX_API_KEY
+#    ANTHROPIC_API_KEY
+#    SECRET_KEY
+# ═══════════════════════════════════════════════════════════════════════
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Update K8s secret
+        run: |
+          kubectl create secret generic mindvault-secrets \
+            --namespace=mindvault \
+            --from-literal=PAGEINDEX_API_KEY="${{ secrets.PAGEINDEX_API_KEY }}" \
+            --from-literal=ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
+            --from-literal=SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply K8s manifests
+        run: |
+          kubectl apply -f deploy/k8s/namespace.yaml
+          kubectl apply -f deploy/k8s/configmap.yaml
+          kubectl apply -f deploy/k8s/service.yaml
+
+      - name: Rolling deploy (update image)
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/mindvault:sha-${{ github.sha }}"
+          kubectl set image deployment/mindvault mindvault=$IMAGE \
+            --namespace=mindvault
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/mindvault \
+            --namespace=mindvault \
+            --timeout=300s
+
+      - name: Verify health
+        run: |
+          kubectl run health-check --image=curlimages/curl --restart=Never \
+            --namespace=mindvault \
+            --command -- curl -f http://mindvault-svc/health
+          sleep 5
+          kubectl logs health-check --namespace=mindvault
+          kubectl delete pod health-check --namespace=mindvault
